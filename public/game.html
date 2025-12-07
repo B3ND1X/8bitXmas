@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>8bit Santa</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0b1e36" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <style>
+    :root {
+      --bg: linear-gradient(180deg, #071427 0%, #0d2c55 60%, #0a1e38);
+      --ui: rgba(7, 14, 28, 0.82);
+      --accent: #ffea6b;
+      --accent-2: #7ef5d2;
+      --text: #eaf7ff;
+      --muted: #c2d7f1;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* no scroll inside iframe */
+      touch-action: none; /* disable pinch/zoom */
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-text-size-adjust: 100%;
+      font-size: 16px;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      background: linear-gradient(180deg, #07172c 0%,
+        #0f2f57 50%, #0b1f36 100%);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      padding: 18px;
+    }
+
+    .device {
+      background: #cbd4b3;
+      border-radius: 28px;
+      padding: 22px 22px 26px;
+      box-shadow:
+        0 18px 38px rgba(0, 0, 0, 0.45),
+        inset 0 0 0 2px rgba(255,255,255,0.25);
+      width: min(1020px, 100%);
+      height: 100%;
+      max-height: 100%;
+      display: flex;
+    }
+
+    .screen-bezel {
+      background: #394837;
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,0.28);
+      flex: 1;
+      display: flex;
+    }
+
+    .shell {
+      width: 100%;
+      background: var(--ui);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 14px 14px 16px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative; /* anchor toast */
+    }
+
+    .title {
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      font-weight: 800;
+      color: var(--accent);
+      text-align: center;
+      margin: 0 0 6px;
+    }
+
+    .tagline {
+      text-align: center;
+      margin-bottom: 12px;
+      color: var(--muted);
+    }
+
+    .layout {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: 100%;
+    }
+
+    .play-area {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1 1 auto;
+    }
+
+    .controls-panel {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+    }
+
+    canvas {
+      width: 100%;
+      height: clamp(320px, 60vh, 520px);
+      border-radius: 12px;
+      display: block;
+      background: linear-gradient(180deg, #82d7ff 0%,
+        #ccefff 55%, #f4fbff 55%, #d7ebff 100%);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .hud {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+      color: var(--muted);
+      font-weight: 700;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .hud strong { color: var(--accent-2); }
+
+    .win {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: 800;
+      min-height: 1.4em;
+      color: #8ff9a9;
+    }
+
+    .win.ok { color: #8ff9a9; }
+    .win.danger { color: #ff9bb0; }
+
+    .controls {
+      margin-top: 0;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      gap: 12px;
+      user-select: none;
+      touch-action: none;
+      width: 100%;
+    }
+
+    .pad {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(64px, 1fr));
+      grid-auto-rows: minmax(64px, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .pad button {
+      background: linear-gradient(145deg, rgba(255,255,255,0.08),
+        rgba(255,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      color: var(--text);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(0,0,0,0.35);
+      transition: transform 0.1s ease, border-color 0.1s ease;
+      font-size: 1rem;
+      padding: 10px 0;
+      min-height: 72px;
+    }
+
+    .pad button:active,
+    .pad button.active {
+      transform: translateY(1px);
+      border-color: var(--accent);
+    }
+
+    .toast {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(6, 8, 18, 0.9);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      max-width: min(92vw, 560px);
+      text-align: center;
+      z-index: 10;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      pointer-events: none;
+    }
+
+    .toast.hide {
+      opacity: 0;
+      transform: translate(-50%, -6px);
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 8px;
+        align-items: stretch;
+        justify-content: center;
+      }
+
+      .device {
+        width: 100%;
+        height: 100%;
+        border-radius: 18px;
+        padding: 10px 10px 16px;
+        display: flex;
+      }
+
+      .screen-bezel,
+      .shell {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .hud {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    /* Hide internal touch controls – we use external pad */
+    .controls-panel,
+    .controls {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="device">
+    <div class="screen-bezel">
+      <div class="shell">
+        <div id="goal-toast" class="toast goal-toast">
+          Goal: Collect every cookie, then drop Santa down the chimney.
+        </div>
+        <div class="layout">
+          <div class="play-area">
+            <canvas id="game" width="800" height="400"></canvas>
+            <div class="hud">
+              <div>Cookies: <strong id="coins">0</strong>/<span id="coin-total">0</span></div>
+              <div>Goal: Collect every cookie, then drop Santa down the chimney.</div>
+            </div>
+            <div id="win" class="win"></div>
+          </div>
+
+          <!-- kept in markup but hidden by CSS -->
+          <div class="controls-panel">
+            <div class="controls" aria-label="Touch controls">
+              <div class="pad">
+                <button data-key="ArrowLeft">◀</button>
+                <button data-key="ArrowRight">▶</button>
+                <button data-key="ArrowUp">▲</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- audio elements unchanged -->
+  <audio id="snd-music" src="audio/gameboy-music.mp3" loop playsinline></audio>
+  <audio id="snd-jump" src="audio/jump.wav" playsinline></audio>
+  <audio id="snd-coin" src="audio/coin.wav" playsinline></audio>
+  <audio id="snd-victory" src="audio/victory.wav" playsinline></audio>
+  <audio id="snd-death" src="audio/death.wav" playsinline></audio>
+  <audio id="snd-stomp" src="audio/stomp.wav" playsinline></audio>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    const sounds = {
+      music: document.getElementById("snd-music"),
+      jump: document.getElementById("snd-jump"),
+      coin: document.getElementById("snd-coin"),
+      victory: document.getElementById("snd-victory"),
+      death: document.getElementById("snd-death"),
+      stomp: document.getElementById("snd-stomp"),
+    };
+    Object.values(sounds).forEach((a) => {
+      if (!a) return;
+      a.preload = "auto";
+      if (a.id === "snd-music") a.volume = 0.4;
+      else a.volume = 0.65;
+    });
+    const audioPools = {};
+    ["coin", "stomp"].forEach((key) => {
+      const base = sounds[key];
+      if (!base) return;
+      audioPools[key] = Array.from({ length: 4 }, () => {
+        const clone = base.cloneNode();
+        clone.preload = "auto";
+        clone.volume = base.volume;
+        return clone;
+      });
+    });
+    const sfxCooldown = { coin: 80, jump: 70, stomp: 120, death: 260, victory: 260 };
+    const lastPlay = {};
+    let musicStarted = false;
+    const goalToast = document.getElementById("goal-toast");
+    let goalToastHidden = false;
+    let winToastShown = false;
+    let skyGradient = null;
+
+    const hideGoalToast = () => {
+      if (goalToastHidden || !goalToast) return;
+      goalToastHidden = true;
+      goalToast.classList.add("hide");
+      setTimeout(() => goalToast.remove(), 600);
+    };
+
+    setTimeout(hideGoalToast, 4200);
+
+    /* Block double-tap / pinch zoom on iOS inside iframe */
+    let lastTouchEnd = 0;
+    document.addEventListener("touchend", (e) => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 500) {
+        e.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
+    const stopZoom = (e) => {
+      if (e.touches && e.touches.length > 1) e.preventDefault();
+    };
+    document.addEventListener("touchstart", stopZoom, { passive: false });
+    document.addEventListener("touchmove", stopZoom, { passive: false });
+    document.addEventListener("wheel", (e) => e.preventDefault(), { passive: false });
+    document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
+
+    const buildGradients = () => {
+      skyGradient = ctx.createLinearGradient(0, 0, 0, world.ground);
+      skyGradient.addColorStop(0, "#8addff");
+      skyGradient.addColorStop(0.55, "#c7ecff");
+      skyGradient.addColorStop(1, "#eef8ff");
+    };
+    window.addEventListener("resize", buildGradients);
+
+    const showWinToast = () => {
+      if (winToastShown) return;
+      winToastShown = true;
+      const shell = document.querySelector(".shell");
+      if (!shell) return;
+      const toast = document.createElement("div");
+      toast.className = "toast win-toast";
+      toast.textContent =
+        "Level clear!";
+      shell.appendChild(toast);
+      setTimeout(() => toast.classList.add("hide"), 5200);
+      setTimeout(() => toast.remove(), 5800);
+    };
+
+    const playSound = (key, allowOverlap = false) => {
+      if (key !== "music") {
+        const now = performance.now();
+        const minGap = sfxCooldown[key] ?? 50;
+        if (now - (lastPlay[key] || 0) < minGap) return;
+        lastPlay[key] = now;
+      }
+
+      const pool = audioPools[key];
+      if (allowOverlap && pool && pool.length) {
+        const ready = pool.find((a) => a.paused);
+        if (ready) {
+          ready.currentTime = 0;
+          ready.play().catch(() => {});
+          return;
+        }
+      }
+      const audio = sounds[key];
+      if (!audio) return;
+      try {
+        if (allowOverlap) {
+          const clone = audio.cloneNode();
+          clone.play().catch(() => {});
+        } else {
+          audio.currentTime = 0;
+          audio.play().catch(() => {});
+        }
+      } catch {}
+    };
+
+    const ensureMusic = () => {
+      if (musicStarted) return;
+      musicStarted = true;
+      playSound("music");
+    };
+
+    const primeAudio = () => {
+      ensureMusic();
+      ["jump", "coin", "stomp", "death", "victory"].forEach((k) => {
+        const a = sounds[k];
+        if (!a) return;
+        const wasMuted = a.muted;
+        a.muted = true;
+        a.play()
+          .then(() => {
+            a.pause();
+            a.currentTime = 0;
+            a.muted = wasMuted;
+          })
+          .catch(() => {
+            a.muted = wasMuted;
+          });
+      });
+    };
+
+    window.addEventListener("pointerdown", primeAudio, { once: true });
+    window.addEventListener("keydown",  primeAudio, { once: true });
+    window.addEventListener("pointerdown", hideGoalToast, { once: true });
+    window.addEventListener("keydown", hideGoalToast, { once: true });
+
+    const chunkWidth = 2200;
+    const chunkCount = 10;
+    const world = {
+      width: chunkWidth * chunkCount + 400,
+      height: canvas.height,
+      ground: Math.min(340, canvas.height - 80),
+    };
+    const player = { x: 50, y: 0, w: 32, h: 42, vx: 0, vy: 0, onGround: false };
+
+    const platforms = [];
+    const movingPlatforms = [];
+    const hazards = [];
+    const coins = [];
+    const goombas = [];
+    const shrooms = [];
+    const snowflakes = Array.from({ length: 120 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: 0.8 + Math.random() * 1.6,
+      speed: 0.6 + Math.random() * 1,
+      drift: (Math.random() - 0.5) * 0.6,
+    }));
+
+    const addChunk = (base) => {
+      const g = world.ground;
+      platforms.push(
+        { x: base + 160, y: g - 60, w: 180, h: 16 },
+        { x: base + 380, y: g - 120, w: 160, h: 16 },
+        { x: base + 660, y: g - 90, w: 190, h: 16 },
+        { x: base + 980, y: g - 150, w: 170, h: 16 },
+        { x: base + 1240, y: g - 110, w: 190, h: 16 },
+        { x: base + 1520, y: g - 80, w: 180, h: 16 },
+        { x: base + 1780, y: g - 140, w: 190, h: 16 }
+      );
+
+      movingPlatforms.push(
+        { x: base + 520, y: g - 200, w: 140, h: 16, dir: 1, range: 160, speed: 1.3, origin: base + 520 },
+        { x: base + 1380, y: g - 190, w: 140, h: 16, dir: -1, range: 190, speed: 1.6, origin: base + 1380 }
+      );
+
+      hazards.push(
+        { x: base + 120, y: g - 12, w: 120, h: 12 },
+        { x: base + 620, y: g - 12, w: 140, h: 12 },
+        { x: base + 1110, y: g - 12, w: 160, h: 12 },
+        { x: base + 1650, y: g - 12, w: 150, h: 12 }
+      );
+
+      coins.push(
+        { x: base + 220, y: g - 110, r: 10, collected: false },
+        { x: base + 760, y: g - 140, r: 10, collected: false },
+        { x: base + 1460, y: g - 150, r: 10, collected: false }
+      );
+
+      goombas.push(
+        { x: base + 340, y: g - 28, w: 32, h: 26, dir: 1, speed: 0.8, range: 180, origin: base + 340, alive: true },
+        { x: base + 880, y: g - 28, w: 32, h: 26, dir: -1, speed: 0.9, range: 200, origin: base + 880, alive: true }
+      );
+
+      shrooms.push(
+        { x: base + 1280, y: g - 28, w: 32, h: 28, dir: 1, speed: 1.1, range: 220, origin: base + 1280, alive: true },
+        { x: base + 1720, y: g - 28, w: 32, h: 28, dir: -1, speed: 1.2, range: 180, origin: base + 1720, alive: true }
+      );
+    };
+
+    for (let i = 0; i < chunkCount; i++) addChunk(i * chunkWidth);
+
+    buildGradients();
+
+    const house = (() => {
+      const w = 280;
+      const wallH = 140;
+      const roofH = 60;
+      const x = world.width - w - 200;
+      const wallTop = world.ground - wallH;
+      const roofPeakY = wallTop - roofH;
+      const chimney = {
+        x: x + w * 0.62,
+        w: 46,
+        h: 56,
+        openingH: 16,
+        topY: roofPeakY + 4,
+      };
+      const chimneyTarget = {
+        x: chimney.x + 6,
+        y: chimney.topY,
+        w: chimney.w - 12,
+        h: chimney.openingH + 6,
+      };
+      return { x, w, wallH, roofH, wallTop, roofPeakY, chimney, chimneyTarget };
+    })();
+    const keys = new Set();
+    let win = false;
+    let camX = 0;
+    let viewStart = 0;
+    let viewEnd = canvas.width;
+    const viewMargin = 220;
+
+    const rectVisible = (obj, margin = 0) =>
+      obj.x + obj.w >= viewStart - margin && obj.x <= viewEnd + margin;
+    const coinVisible = (c, margin = 0) =>
+      c.x + c.r >= viewStart - margin && c.x - c.r <= viewEnd + margin;
+
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    document.getElementById("coin-total").textContent = coins.length;
+
+    const resetPlayer = (message) => {
+      player.x = 40;
+      player.y = 0;
+      player.vx = 0;
+      player.vy = 0;
+      const winText = document.getElementById("win");
+      if (!win) {
+        winText.textContent = message;
+        winText.className = "win danger";
+      }
+    };
+
+    const updateMovingPlatforms = () => {
+      movingPlatforms.forEach((p) => {
+        p.x += p.speed * p.dir;
+        const max = p.origin + p.range;
+        const min = p.origin - p.range;
+        if (p.x > max) { p.x = max; p.dir *= -1; }
+        if (p.x < min) { p.x = min; p.dir *= -1; }
+      });
+    };
+
+    const updatePatrol = (list) => {
+      list.forEach((e) => {
+        if (!e.alive) return;
+        e.x += e.speed * e.dir;
+        const max = e.origin + e.range;
+        const min = e.origin - e.range;
+        if (e.x > max) { e.x = max; e.dir *= -1; }
+        if (e.x < min) { e.x = min; e.dir *= -1; }
+      });
+    };
+
+    const handleInput = () => {
+      const left  = keys.has("ArrowLeft")  || keys.has("a");
+      const right = keys.has("ArrowRight") || keys.has("d");
+      const jump  = keys.has("ArrowUp")    || keys.has("w") || keys.has(" ");
+
+      if (left)  player.vx -= 0.5;
+      if (right) player.vx += 0.5;
+      player.vx *= 0.88;
+      player.vx = clamp(player.vx, -6, 6);
+
+      if (jump && player.onGround) {
+        player.vy = -14;
+        player.onGround = false;
+        playSound("jump");
+      }
+
+      if (left || right || jump) ensureMusic();
+    };
+
+    const applyPhysics = () => {
+      player.vy += 0.6;
+      player.vy = clamp(player.vy, -16, 12);
+      player.x += player.vx;
+      player.y += player.vy;
+
+      player.x = clamp(player.x, 0, world.width - player.w);
+      player.onGround = false;
+
+      if (player.y + player.h >= world.ground) {
+        player.y = world.ground - player.h;
+        player.vy = 0;
+        player.onGround = true;
+      }
+
+      const activePlatforms = [...platforms, ...movingPlatforms];
+      activePlatforms.forEach((p) => {
+        const withinX = player.x + player.w > p.x && player.x < p.x + p.w;
+        const descending = player.vy >= 0;
+        const above = player.y + player.h <= p.y + 8;
+        if (withinX && descending && above &&
+            player.y + player.h + player.vy >= p.y) {
+          player.y = p.y - player.h;
+          player.vy = 0;
+          player.onGround = true;
+        }
+      });
+    };
+
+    const checkCoins = () => {
+      coins.forEach((c) => {
+        if (c.collected) return;
+        if (!coinVisible(c, 80)) return;
+        const dx = player.x + player.w / 2 - c.x;
+        const dy = player.y + player.h / 2 - c.y;
+        const rr = c.r + 14;
+        if (dx * dx + dy * dy < rr * rr) {
+          c.collected = true;
+          playSound("coin");
+        }
+      });
+      document.getElementById("coins").textContent =
+        coins.filter((c) => c.collected).length;
+    };
+
+    const checkWin = () => {
+      const allCoins = coins.every((c) => c.collected);
+      const target = house.chimneyTarget;
+      const inChimney =
+        player.x + player.w > target.x &&
+        player.x < target.x + target.w &&
+        player.y + player.h > target.y &&
+        player.y < target.y + target.h &&
+        player.vy >= 0;
+      if (allCoins && inChimney) {
+        win = true;
+        const winText = document.getElementById("win");
+        winText.textContent =
+          "Level clear!";
+        winText.className = "win ok";
+        playSound("victory");
+        showWinToast();
+      }
+    };
+
+    const checkHazards = () => {
+      const hit = hazards.some((h) =>
+        rectVisible(h, 40) &&
+        player.x + player.w > h.x &&
+        player.x < h.x + h.w &&
+        player.y + player.h > h.y &&
+        player.y < h.y + h.h
+      );
+      if (hit) {
+        resetPlayer("Ouch! Spikes send you back. Try a different route.");
+        playSound("death");
+      }
+    };
+
+    const checkEnemies = () => {
+      const handleEnemy = (enemy, label) => {
+        if (!enemy.alive) return false;
+        if (!rectVisible(enemy, 80)) return false;
+        const overlap =
+          player.x + player.w > enemy.x &&
+          player.x < enemy.x + enemy.w &&
+          player.y + player.h > enemy.y &&
+          player.y < enemy.y + enemy.h;
+        if (!overlap) return false;
+
+        const stomping = player.vy > 0 && player.y + player.h <= enemy.y + 10;
+        if (stomping) {
+          enemy.alive = false;
+          player.vy = -12;
+          playSound("stomp");
+          return true;
+        }
+
+        resetPlayer(`A ${label} bonked you! Back to the start.`);
+        playSound("death");
+        return true;
+      };
+
+      goombas.forEach((g) => handleEnemy(g, "gingerbread man"));
+      shrooms.forEach((m) => handleEnemy(m, "evil elf"));
+    };
+
+    const drawBackground = () => {
+      if (!skyGradient) buildGradients();
+      ctx.fillStyle = skyGradient;
+      ctx.fillRect(0, 0, canvas.width, world.ground);
+
+      const drawHills = (color, radius, offsetY, spacing, parallax) => {
+        const count = Math.ceil(canvas.width / spacing) + 3;
+        const shift = (camX * parallax) % spacing;
+        for (let i = -1; i < count; i++) {
+          const cx = i * spacing - shift + spacing * 0.4;
+          ctx.beginPath();
+          ctx.arc(cx, world.ground + offsetY, radius, Math.PI, 0);
+          ctx.fillStyle = color;
+          ctx.fill();
+        }
+      };
+
+      drawHills("#d9efff", 270, 90, 320, 0.22);
+      drawHills("#c2e4ff", 220, 70, 270, 0.32);
+
+      ctx.fillStyle = "#2c4f69";
+      for (let i = -1; i < Math.ceil(canvas.width / 160) + 2; i++) {
+        const baseX = i * 170 - ((camX * 0.35) % 170);
+        const baseY = world.ground + 14;
+        ctx.beginPath();
+        ctx.moveTo(baseX + 40, baseY - 86);
+        ctx.lineTo(baseX + 12, baseY);
+        ctx.lineTo(baseX + 68, baseY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#e8f5ff";
+        ctx.beginPath();
+        ctx.moveTo(baseX + 40, baseY - 86);
+        ctx.lineTo(baseX + 28, baseY - 52);
+        ctx.lineTo(baseX + 52, baseY - 52);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#2c4f69";
+      }
+
+      ctx.fillStyle = "#f7fbff";
+      ctx.fillRect(0, world.ground, canvas.width, canvas.height - world.ground);
+      ctx.fillStyle = "#e3f3ff";
+      const snowBands = Math.ceil(canvas.width / 140) + 3;
+      const snowOffset = camX % 140;
+      for (let i = -1; i < snowBands; i++) {
+        const cx = i * 140 - snowOffset;
+        ctx.beginPath();
+        ctx.ellipse(cx + 70, world.ground + 18, 92, 26, 0, Math.PI, 0);
+        ctx.fill();
+      }
+    };
+
+    const drawPlatform = (p) => {
+      if (!rectVisible(p, 40)) return;
+      const px = p.x - camX;
+      ctx.fillStyle = "#7f5a34";
+      ctx.fillRect(px, p.y + 4, p.w, p.h - 4);
+      ctx.fillStyle = "#9f7644";
+      ctx.fillRect(px, p.y, p.w, 10);
+      ctx.fillStyle = "#f9fdff";
+      ctx.fillRect(px - 2, p.y - 6, p.w + 4, 10);
+      ctx.fillStyle = "#d6e8f8";
+      for (let i = 0; i < p.w; i += 24) {
+        ctx.beginPath();
+        ctx.arc(px + i + 10, p.y - 2, 8, Math.PI, 0);
+        ctx.fill();
+      }
+    };
+
+    const drawCoins = () => {
+      coins.forEach((c) => {
+        if (c.collected) return;
+        if (!coinVisible(c, 40)) return;
+        ctx.beginPath();
+        const cx = c.x - camX;
+        ctx.arc(cx, c.y, c.r, 0, Math.PI * 2);
+        ctx.fillStyle = "#e0b788";
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#b37c44";
+        ctx.stroke();
+
+        ctx.fillStyle = "#c08c55";
+        ctx.beginPath();
+        ctx.arc(cx, c.y + 2, c.r * 0.65, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#4a2d1a";
+        const chipPositions = [
+          [0.1, -0.35],
+          [-0.45, -0.05],
+          [0.4, 0.1],
+          [-0.15, 0.35],
+          [0.25, -0.15],
+        ];
+        chipPositions.forEach(([dx, dy]) => {
+          ctx.beginPath();
+          ctx.arc(cx + dx * c.r, c.y + dy * c.r, c.r * 0.16, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      });
+    };
+
+    const drawHazards = () => {
+      hazards.forEach((h) => {
+        if (!rectVisible(h, 30)) return;
+        const baseX = h.x - camX;
+        const baseY = h.y + h.h;
+        ctx.fillStyle = "#c6e6ff";
+        ctx.fillRect(baseX, baseY - 6, h.w, 6);
+        for (let i = 0; i < h.w; i += 18) {
+          const x = baseX + i;
+          const grad = ctx.createLinearGradient(x, h.y, x, baseY);
+          grad.addColorStop(0, "#e9f6ff");
+          grad.addColorStop(1, "#62b8ff");
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.moveTo(x, baseY);
+          ctx.lineTo(x + 9, h.y);
+          ctx.lineTo(x + 18, baseY);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255,255,255,0.9)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x + 9, h.y);
+          ctx.lineTo(x + 9, baseY);
+          ctx.stroke();
+        }
+      });
+    };
+
+    const recycleSnowflake = (f) => {
+      f.x = Math.random() * canvas.width;
+      f.y = -8;
+      f.r = 0.8 + Math.random() * 1.6;
+      f.speed = 0.6 + Math.random() * 1;
+      f.drift = (Math.random() - 0.5) * 0.6;
+    };
+
+    const drawSnowfall = () => {
+      ctx.save();
+      ctx.globalAlpha = 0.82;
+      ctx.fillStyle = "#ffffff";
+      snowflakes.forEach((f) => {
+        f.y += f.speed;
+        f.x += f.drift * 0.6;
+        if (f.y > canvas.height + 6) recycleSnowflake(f);
+        if (f.x < -12) f.x = canvas.width + 12;
+        if (f.x > canvas.width + 12) f.x = -12;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    };
+
+    const drawGoombas = () => {
+      goombas.forEach((g) => {
+        if (!g.alive) return;
+        if (!rectVisible(g, 60)) return;
+        const px = g.x - camX;
+        const py = g.y;
+        const w = g.w;
+        const h = g.h;
+        const headR = w * 0.38;
+        const headCX = px + w / 2;
+        const headCY = py + headR * 0.9;
+        const bodyTop = py + headR * 1.2;
+        const bodyBottom = py + h;
+
+        const frosting = "#f7eee2";
+        const dough = "#bd7a39";
+        const crust = "#8b4f1f";
+
+        ctx.fillStyle = dough;
+        ctx.strokeStyle = crust;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(px + w * 0.2, bodyTop);
+        ctx.lineTo(px + w * 0.2, bodyBottom - 6);
+        ctx.quadraticCurveTo(px + w * 0.2, bodyBottom - 2, px + w * 0.3, bodyBottom - 2);
+        ctx.lineTo(px + w * 0.7, bodyBottom - 2);
+        ctx.quadraticCurveTo(px + w * 0.8, bodyBottom - 2, px + w * 0.8, bodyBottom - 6);
+        ctx.lineTo(px + w * 0.8, bodyTop);
+        ctx.quadraticCurveTo(px + w * 0.85, bodyTop - 6, px + w * 0.7, bodyTop - 8);
+        ctx.lineTo(px + w * 0.3, bodyTop - 8);
+        ctx.quadraticCurveTo(px + w * 0.15, bodyTop - 6, px + w * 0.2, bodyTop);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(headCX, headCY, headR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = frosting;
+        ctx.beginPath();
+        ctx.arc(headCX - headR * 0.35, headCY - headR * 0.1, headR * 0.22, 0, Math.PI * 2);
+        ctx.arc(headCX + headR * 0.35, headCY - headR * 0.1, headR * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#1b1b1b";
+        ctx.beginPath();
+        ctx.arc(headCX - headR * 0.35, headCY - headR * 0.1, headR * 0.12, 0, Math.PI * 2);
+        ctx.arc(headCX + headR * 0.35, headCY - headR * 0.1, headR * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#57240f";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(headCX - headR * 0.55, headCY - headR * 0.38);
+        ctx.lineTo(headCX - headR * 0.2, headCY - headR * 0.2);
+        ctx.moveTo(headCX + headR * 0.55, headCY - headR * 0.38);
+        ctx.lineTo(headCX + headR * 0.2, headCY - headR * 0.2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(headCX, headCY + headR * 0.25, headR * 0.38, Math.PI * 0.15, Math.PI - Math.PI * 0.15);
+        ctx.stroke();
+
+        ctx.fillStyle = "#e64b3c";
+        [0.0, 0.35, -0.35].forEach((off, idx) => {
+          const cy = bodyTop + (idx + 0.6) * 6;
+          ctx.beginPath();
+          ctx.arc(headCX + off * w * 0.2, cy + idx * 2, w * 0.1, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        ctx.fillStyle = frosting;
+        ctx.beginPath();
+        ctx.moveTo(px + w * 0.18, bodyBottom - 4);
+        ctx.lineTo(px + w * 0.82, bodyBottom - 4);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = frosting;
+        ctx.stroke();
+      });
+    };
+
+    const drawShrooms = () => {
+      shrooms.forEach((m) => {
+        if (!m.alive) return;
+        if (!rectVisible(m, 60)) return;
+        const px = m.x - camX;
+        const py = m.y;
+        const w = m.w;
+        const h = m.h;
+        const cx = px + w / 2;
+        const faceH = h * 0.5;
+        const bodyTop = py + faceH - 2;
+
+        ctx.fillStyle = "#165f32";
+        ctx.fillRect(px, bodyTop, w, h - faceH + 2);
+        ctx.fillStyle = "#0f3f24";
+        ctx.fillRect(px, bodyTop + (h - faceH) * 0.55, w, 4);
+
+        ctx.fillStyle = "#f5d5a5";
+        ctx.fillRect(px + 3, py + faceH * 0.1, w - 6, faceH * 0.9);
+
+        ctx.fillStyle = "#0f3f24";
+        ctx.beginPath();
+        ctx.moveTo(px - 4, py + faceH * 0.35);
+        ctx.lineTo(px + 2, py + faceH * 0.25);
+        ctx.lineTo(px + 2, py + faceH * 0.55);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(px + w + 4, py + faceH * 0.35);
+        ctx.lineTo(px + w - 2, py + faceH * 0.25);
+        ctx.lineTo(px + w - 2, py + faceH * 0.55);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = "#158f3f";
+        ctx.beginPath();
+        ctx.moveTo(cx, py - 6);
+        ctx.lineTo(px - 4, py + faceH * 0.3);
+        ctx.lineTo(px + w + 4, py + faceH * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#f9fdff";
+        ctx.beginPath();
+        ctx.arc(cx + 2, py - 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#1b1b1b";
+        ctx.beginPath();
+        ctx.arc(cx - 6, py + faceH * 0.42, 3, 0, Math.PI * 2);
+        ctx.arc(cx + 6, py + faceH * 0.42, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#5a2a17";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, py + faceH * 0.28);
+        ctx.lineTo(cx - 2, py + faceH * 0.36);
+        ctx.moveTo(cx + 10, py + faceH * 0.28);
+        ctx.lineTo(cx + 2, py + faceH * 0.36);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(cx, py + faceH * 0.58, 7, Math.PI * 0.1, Math.PI - Math.PI * 0.1);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#d9f7ff";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(px + 4, bodyTop + 4);
+        ctx.lineTo(px + w - 4, bodyTop + 4);
+        ctx.stroke();
+
+        ctx.fillStyle = "#c62828";
+        [0, 1, -1].forEach((i) => {
+          ctx.beginPath();
+          ctx.arc(cx + i * 8, bodyTop + 12 + i * 2, 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        ctx.fillStyle = "#0f3f24";
+        ctx.fillRect(px + 4, py + h - 8, w - 8, 6);
+      });
+    };
+
+    const drawHouse = () => {
+      const { x, w, wallH, wallTop, roofPeakY, chimney, chimneyTarget } = house;
+      if (!rectVisible({ x: x - 40, w: w + 80 }, 80)) return;
+
+      const baseX = x - camX;
+      const groundY = world.ground;
+
+      ctx.fillStyle = "#e9dcc9";
+      ctx.fillRect(baseX, wallTop, w, wallH);
+      ctx.fillStyle = "#d2c2ac";
+      ctx.fillRect(baseX, wallTop + wallH - 18, w, 18);
+      ctx.fillStyle = "#b29d84";
+      ctx.fillRect(baseX - 4, wallTop - 4, w + 8, 8);
+
+      const drawWindow = (wx, wy) => {
+        const winW = 46;
+        const winH = 40;
+        ctx.fillStyle = "#0c2338";
+        ctx.fillRect(wx, wy, winW, winH);
+        ctx.fillStyle = "#7ef5d2";
+        ctx.fillRect(wx + 4, wy + 4, winW - 8, winH - 8);
+        ctx.fillStyle = "rgba(255,255,255,0.45)";
+        ctx.fillRect(wx + 8, wy + 6, 6, winH - 12);
+        ctx.fillRect(wx + winW / 2 - 2, wy + 6, 4, winH - 12);
+        ctx.fillRect(wx + 8, wy + winH / 2 - 2, winW - 16, 4);
+      };
+
+      drawWindow(baseX + w * 0.16, wallTop + 26);
+      drawWindow(baseX + w * 0.56, wallTop + 34);
+
+      const doorW = 52;
+      const doorH = 82;
+      const doorX = baseX + w * 0.32;
+      const doorY = groundY - doorH;
+      ctx.fillStyle = "#6f3e2b";
+      ctx.fillRect(doorX, doorY, doorW, doorH);
+      ctx.fillStyle = "#4d2c1e";
+      ctx.fillRect(doorX + 6, doorY + 12, doorW - 12, doorH - 16);
+      ctx.fillStyle = "#ffde59";
+      ctx.beginPath();
+      ctx.arc(doorX + doorW - 12, doorY + doorH * 0.55, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#b9332e";
+      ctx.beginPath();
+      ctx.moveTo(baseX - 20, wallTop);
+      ctx.lineTo(baseX + w / 2, roofPeakY);
+      ctx.lineTo(baseX + w + 20, wallTop);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#f9fdff";
+      ctx.beginPath();
+      ctx.moveTo(baseX - 10, wallTop + 6);
+      ctx.lineTo(baseX + w / 2, roofPeakY - 6);
+      ctx.lineTo(baseX + w + 10, wallTop + 6);
+      ctx.closePath();
+      ctx.fill();
+
+      const chimX = chimney.x - camX;
+      const chimY = chimney.topY;
+      ctx.fillStyle = "#b8684e";
+      ctx.fillRect(chimX, chimY, chimney.w, chimney.h);
+      ctx.fillStyle = "#d27b5b";
+      ctx.fillRect(chimX + 4, chimY + 8, chimney.w - 8, chimney.h - 16);
+      ctx.fillStyle = "#f9fdff";
+      ctx.fillRect(chimX - 2, chimY - 6, chimney.w + 4, 8);
+
+      const targetX = chimneyTarget.x - camX;
+      ctx.fillStyle = "#0c1324";
+      ctx.fillRect(targetX, chimneyTarget.y, chimneyTarget.w, chimneyTarget.h);
+      ctx.strokeStyle = "#ffde59";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(targetX, chimneyTarget.y, chimneyTarget.w, chimneyTarget.h);
+
+      const wreathX = doorX + doorW / 2;
+      const wreathY = doorY + 18;
+      ctx.fillStyle = "#1f6b3d";
+      ctx.beginPath();
+      ctx.arc(wreathX, wreathY, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ff9bb0";
+      ctx.beginPath();
+      ctx.arc(wreathX, wreathY, 4, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    const drawPlayer = () => {
+      const px = player.x - camX;
+      const py = player.y;
+      const w = player.w;
+      const h = player.h;
+      const cx = px + w / 2;
+
+      const headR = w * 0.32;
+      const headCY = py + headR + 2;
+      const feetY = py + h;
+      const bootH = Math.round(h * 0.17);
+      const legH = Math.round(h * 0.12);
+      const legTop = feetY - bootH - legH;
+      const coatTop = py + headR * 1.5;
+      const coatBottom = legTop;
+      const coatH = coatBottom - coatTop;
+
+      ctx.save();
+
+      ctx.fillStyle = "#1b1d2f";
+      ctx.fillRect(px + 3, feetY - bootH, w / 2 - 5, bootH);
+      ctx.fillRect(px + w / 2 + 2, feetY - bootH, w / 2 - 5, bootH);
+
+      ctx.fillStyle = "#b71c1c";
+      ctx.fillRect(px + 4, legTop, w / 2 - 6, legH);
+      ctx.fillRect(px + w / 2 + 2, legTop, w / 2 - 6, legH);
+
+      ctx.fillStyle = "#c62828";
+      ctx.fillRect(px + 2, coatTop, w - 4, coatH);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(cx - 2, coatTop, 4, coatH);
+
+      const beltY = coatTop + coatH * 0.55;
+      ctx.fillStyle = "#1b1d2f";
+      ctx.fillRect(px + 2, beltY, w - 4, 4);
+      ctx.fillStyle = "#ffde59";
+      ctx.fillRect(cx - 4, beltY + 1, 8, 2);
+
+      const armY = coatTop + coatH * 0.35;
+      ctx.fillStyle = "#c62828";
+      ctx.fillRect(px - 4, armY, 6, 6);
+      ctx.fillRect(px + w - 2, armY, 6, 6);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(px - 4, armY + 4, 6, 2);
+      ctx.fillRect(px + w - 2, armY + 4, 6, 2);
+
+      ctx.fillStyle = "#fff";
+      const beardTop = headCY + headR * 0.35;
+      const beardBottom = coatTop + 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - headR * 0.8, beardTop);
+      ctx.lineTo(cx, beardBottom);
+      ctx.lineTo(cx + headR * 0.8, beardTop);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#f6e2c1";
+      ctx.beginPath();
+      ctx.arc(cx, headCY, headR, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(cx - headR * 0.9, headCY - headR * 0.1, headR * 1.8, headR * 0.35);
+
+      ctx.fillStyle = "#c62828";
+      ctx.beginPath();
+      ctx.moveTo(cx - headR, headCY - headR * 0.1);
+      ctx.lineTo(cx + headR, headCY - headR * 0.1);
+      ctx.lineTo(cx, headCY - headR * 1.6);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(cx, headCY - headR * 1.7, headR * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#1b1d2f";
+      ctx.beginPath();
+      ctx.arc(cx - headR * 0.35, headCY - headR * 0.15, headR * 0.12, 0, Math.PI * 2);
+      ctx.arc(cx + headR * 0.35, headCY - headR * 0.15, headR * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#e8b88a";
+      ctx.beginPath();
+      ctx.arc(cx, headCY + headR * 0.05, headR * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    };
+
+    const loop = () => {
+      updateMovingPlatforms();
+      updatePatrol(goombas);
+      updatePatrol(shrooms);
+      handleInput();
+      applyPhysics();
+
+      camX = clamp(
+        player.x - canvas.width / 2 + player.w / 2,
+        0,
+        world.width - canvas.width
+      );
+      viewStart = camX - viewMargin;
+      viewEnd = camX + canvas.width + viewMargin;
+
+      checkCoins();
+      checkHazards();
+      checkEnemies();
+      checkWin();
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBackground();
+      platforms.forEach(drawPlatform);
+      movingPlatforms.forEach(drawPlatform);
+      drawHazards();
+      drawCoins();
+      drawGoombas();
+      drawShrooms();
+      drawHouse();
+      drawPlayer();
+      drawSnowfall();
+
+      if (!win) requestAnimationFrame(loop);
+    };
+
+    window.addEventListener("keydown", (e) => {
+      keys.add(e.key);
+      if (["ArrowUp", "ArrowLeft", "ArrowRight", " ", "a", "d", "w"].includes(e.key)) {
+        e.preventDefault();
+      }
+    });
+    window.addEventListener("keyup", (e) => keys.delete(e.key));
+
+    /* external controller → virtual key presses */
+    window.addEventListener("message", (event) => {
+      const msg = event.data;
+      if (!msg || msg.source !== "controller") return;
+      hideGoalToast();
+
+      if (msg.type === "down") {
+        if (msg.action === "left")  keys.add("ArrowLeft");
+        if (msg.action === "right") keys.add("ArrowRight");
+        if (msg.action === "jump")  keys.add("ArrowUp");
+        ensureMusic();
+      } else if (msg.type === "up") {
+        if (msg.action === "left")  keys.delete("ArrowLeft");
+        if (msg.action === "right") keys.delete("ArrowRight");
+        if (msg.action === "jump")  keys.delete("ArrowUp");
+      }
+    });
+
+    /* Internal buttons (hidden visually) still work if you ever show them */
+    const controlButtons = Array.from(
+      document.querySelectorAll(".controls button[data-key]")
+    ).filter((btn) => !btn.disabled);
+
+    const pressKey = (key, btn) => {
+      keys.add(key);
+      if (btn) btn.classList.add("active");
+      ensureMusic();
+    };
+    const releaseKey = (key, btn) => {
+      keys.delete(key);
+      if (btn) btn.classList.remove("active");
+    };
+
+    controlButtons.forEach((btn) => {
+      const key = btn.dataset.key;
+      btn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        pressKey(key, btn);
+      });
+      const clear = () => releaseKey(key, btn);
+      btn.addEventListener("pointerup", clear);
+      btn.addEventListener("pointercancel", clear);
+      btn.addEventListener("pointerleave", clear);
+    });
+
+    loop();
+
+    const warmCache = () =>
+      navigator.serviceWorker.ready
+        .then((registration) => registration.active?.postMessage({ type: "WARM_CACHE" }))
+        .catch(() => {});
+
+    const registerServiceWorker = () => {
+      navigator.serviceWorker
+        .register("./sw.js")
+        .then(warmCache)
+        .catch(() => {});
+    };
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", registerServiceWorker);
+    }
+  </script>
+</body>
+</html>
