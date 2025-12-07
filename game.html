@@ -586,13 +586,14 @@
         w: chimney.w - 12,
         h: chimney.openingH + 6,
       };
-      house = { x, w, wallH, roofH, wallTop, roofPeakY, chimney, chimneyTarget };
-      platforms.push({
+      const perch = {
         x: x + w * 0.18,
         y: wallTop - 6,
         w: 110,
         h: 12,
-      });
+      };
+      house = { x, w, wallH, roofH, wallTop, roofPeakY, chimney, chimneyTarget, perch };
+      platforms.push(perch);
     };
 
     const updateCoinUI = () => {
@@ -1153,7 +1154,7 @@
 
     const drawHouse = () => {
       if (!house) return;
-      const { x, w, wallH, wallTop, roofPeakY, chimney, chimneyTarget } = house;
+      const { x, w, wallH, wallTop, roofPeakY, chimney, chimneyTarget, perch } = house;
       if (!rectVisible({ x: x - 40, w: w + 80 }, 80)) return;
 
       const baseX = x - camX;
@@ -1209,6 +1210,14 @@
       ctx.lineTo(baseX + w + 10, wallTop + 6);
       ctx.closePath();
       ctx.fill();
+
+      if (perch) {
+        const perchX = perch.x - camX;
+        ctx.fillStyle = "#f9fdff";
+        ctx.fillRect(perchX, perch.y - 4, perch.w, 8);
+        ctx.fillStyle = "#d6e8f8";
+        ctx.fillRect(perchX, perch.y + 2, perch.w, 6);
+      }
 
       const chimX = chimney.x - camX;
       const chimY = chimney.topY;
