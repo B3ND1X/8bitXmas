@@ -1,12 +1,12 @@
 {
-  "name": "Mason Puzzle 4",
-  "short_name": "Puzzle 4",
-  "start_url": "./Mason-puzzle-4.html",
+  "name": "8bit Santa",
+  "short_name": "8bit Santa",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0b1e36",
   "theme_color": "#0b1e36",
-  "description": "Play Mason Puzzle 4 with offline support.",
+  "description": "Play Santa with offline support.",
   "icons": [
     {
       "src": "icons/icon-192.png",
