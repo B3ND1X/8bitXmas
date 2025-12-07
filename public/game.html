@@ -466,6 +466,15 @@
       drift: (Math.random() - 0.5) * 0.6,
     }));
 
+    const clearLevel = () => {
+      platforms.length = 0;
+      movingPlatforms.length = 0;
+      hazards.length = 0;
+      coins.length = 0;
+      goombas.length = 0;
+      shrooms.length = 0;
+    };
+
     const addChunk = (base) => {
       const g = world.ground;
       platforms.push(
@@ -507,15 +516,61 @@
       );
     };
 
-    for (let i = 0; i < chunkCount; i++) addChunk(i * chunkWidth);
+    const addHardChunk = (base, idx) => {
+      const g = world.ground;
+      const low = g - 70;
+      const mid = g - 120;
+      const high = g - 190;
+      const stagger = idx % 2 === 0 ? 0 : 90;
 
-    buildGradients();
+      platforms.push(
+        { x: base + 140, y: low, w: 150, h: 14 },
+        { x: base + 380 + stagger, y: mid, w: 150, h: 14 },
+        { x: base + 640, y: high, w: 120, h: 14 },
+        { x: base + 940 + stagger, y: mid - 14, w: 190, h: 14 },
+        { x: base + 1260, y: g - 170, w: 140, h: 14 },
+        { x: base + 1520, y: g - 100, w: 170, h: 14 }
+      );
 
-    const house = (() => {
+      movingPlatforms.push(
+        { x: base + 460, y: g - 230, w: 120, h: 14, dir: 1, range: 220, speed: 1.9, origin: base + 460 },
+        { x: base + 980, y: g - 180, w: 130, h: 14, dir: -1, range: 240, speed: 2.1, origin: base + 980 },
+        { x: base + 1520, y: g - 220, w: 120, h: 14, dir: idx % 2 ? 1 : -1, range: 180, speed: 2.3, origin: base + 1520 }
+      );
+
+      hazards.push(
+        { x: base + 80, y: g - 12, w: 150, h: 12 },
+        { x: base + 430, y: g - 12, w: 190, h: 12 },
+        { x: base + 880, y: g - 12, w: 170, h: 12 },
+        { x: base + 1180, y: g - 130, w: 80, h: 12 },
+        { x: base + 1320, y: g - 12, w: 200, h: 12 },
+        { x: base + 1640, y: g - 60, w: 130, h: 12 }
+      );
+
+      coins.push(
+        { x: base + 230, y: g - 140, r: 10, collected: false },
+        { x: base + 620, y: g - 210, r: 10, collected: false },
+        { x: base + 1120 + stagger * 0.4, y: g - 190, r: 10, collected: false },
+        { x: base + 1500, y: g - 150, r: 10, collected: false }
+      );
+
+      goombas.push(
+        { x: base + 310, y: g - 28, w: 32, h: 26, dir: 1, speed: 1.1, range: 220, origin: base + 310, alive: true },
+        { x: base + 860, y: g - 28, w: 32, h: 26, dir: -1, speed: 1.2, range: 210, origin: base + 860, alive: true }
+      );
+
+      shrooms.push(
+        { x: base + 1280, y: g - 28, w: 32, h: 28, dir: 1, speed: 1.4, range: 260, origin: base + 1280, alive: true },
+        { x: base + 1700, y: g - 28, w: 32, h: 28, dir: -1, speed: 1.5, range: 220, origin: base + 1700, alive: true }
+      );
+    };
+
+    let house = null;
+    const buildHouse = (offset = 200) => {
       const w = 280;
       const wallH = 140;
       const roofH = 60;
-      const x = world.width - w - 200;
+      const x = world.width - w - offset;
       const wallTop = world.ground - wallH;
       const roofPeakY = wallTop - roofH;
       const chimney = {
@@ -531,9 +586,36 @@
         w: chimney.w - 12,
         h: chimney.openingH + 6,
       };
-      return { x, w, wallH, roofH, wallTop, roofPeakY, chimney, chimneyTarget };
-    })();
+      house = { x, w, wallH, roofH, wallTop, roofPeakY, chimney, chimneyTarget };
+    };
+
+    const updateCoinUI = () => {
+      const totalEl = document.getElementById("coin-total");
+      if (totalEl) totalEl.textContent = coins.length;
+    };
+
+    const buildLevelOne = () => {
+      world.width = chunkWidth * chunkCount + 400;
+      clearLevel();
+      for (let i = 0; i < chunkCount; i++) addChunk(i * chunkWidth);
+      buildHouse(200);
+      updateCoinUI();
+    };
+
+    const buildLevelTwo = () => {
+      const hardChunkWidth = 1900;
+      const hardChunkCount = 9;
+      world.width = hardChunkWidth * hardChunkCount + 600;
+      clearLevel();
+      for (let i = 0; i < hardChunkCount; i++) addHardChunk(i * hardChunkWidth, i);
+      buildHouse(160);
+      updateCoinUI();
+    };
+
+    const levels = [buildLevelOne, buildLevelTwo];
+    const levelNames = ["Snowy Warm-up", "Blizzard Gauntlet"];
     const keys = new Set();
+    let levelIndex = 0;
     let win = false;
     let camX = 0;
     let viewStart = 0;
@@ -546,7 +628,31 @@
       c.x + c.r >= viewStart - margin && c.x - c.r <= viewEnd + margin;
 
     const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-    document.getElementById("coin-total").textContent = coins.length;
+
+    const startLevel = (idx) => {
+      levelIndex = idx;
+      win = false;
+      keys.clear();
+      player.x = 40;
+      player.y = 0;
+      player.vx = 0;
+      player.vy = 0;
+      player.onGround = false;
+      camX = 0;
+      viewStart = 0;
+      viewEnd = canvas.width;
+      const build = levels[idx];
+      if (build) build();
+      buildGradients();
+      document.getElementById("coins").textContent = 0;
+      updateCoinUI();
+      winToastShown = false;
+      const winText = document.getElementById("win");
+      if (winText) {
+        winText.textContent = levelNames[idx] || "Level";
+        winText.className = "win";
+      }
+    };
 
     const resetPlayer = (message) => {
       player.x = 40;
@@ -646,6 +752,7 @@
     };
 
     const checkWin = () => {
+      if (win || !house) return;
       const allCoins = coins.every((c) => c.collected);
       const target = house.chimneyTarget;
       const inChimney =
@@ -657,11 +764,16 @@
       if (allCoins && inChimney) {
         win = true;
         const winText = document.getElementById("win");
-        winText.textContent =
-          "Level clear!";
+        const lastLevel = levelIndex >= levels.length - 1;
+        winText.textContent = lastLevel
+          ? "All levels clear!"
+          : "Level clear! Level 2 incoming...";
         winText.className = "win ok";
         playSound("victory");
         showWinToast();
+        if (!lastLevel) {
+          setTimeout(() => startLevel(levelIndex + 1), 1200);
+        }
       }
     };
 
@@ -1033,6 +1145,7 @@
     };
 
     const drawHouse = () => {
+      if (!house) return;
       const { x, w, wallH, wallTop, roofPeakY, chimney, chimneyTarget } = house;
       if (!rectVisible({ x: x - 40, w: w + 80 }, 80)) return;
 
@@ -1210,24 +1323,26 @@
     };
 
     const loop = () => {
-      updateMovingPlatforms();
-      updatePatrol(goombas);
-      updatePatrol(shrooms);
-      handleInput();
-      applyPhysics();
+      if (!win) {
+        updateMovingPlatforms();
+        updatePatrol(goombas);
+        updatePatrol(shrooms);
+        handleInput();
+        applyPhysics();
 
-      camX = clamp(
-        player.x - canvas.width / 2 + player.w / 2,
-        0,
-        world.width - canvas.width
-      );
-      viewStart = camX - viewMargin;
-      viewEnd = camX + canvas.width + viewMargin;
+        camX = clamp(
+          player.x - canvas.width / 2 + player.w / 2,
+          0,
+          world.width - canvas.width
+        );
+        viewStart = camX - viewMargin;
+        viewEnd = camX + canvas.width + viewMargin;
 
-      checkCoins();
-      checkHazards();
-      checkEnemies();
-      checkWin();
+        checkCoins();
+        checkHazards();
+        checkEnemies();
+        checkWin();
+      }
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawBackground();
@@ -1241,7 +1356,7 @@
       drawPlayer();
       drawSnowfall();
 
-      if (!win) requestAnimationFrame(loop);
+      requestAnimationFrame(loop);
     };
 
     window.addEventListener("keydown", (e) => {
@@ -1297,6 +1412,7 @@
       btn.addEventListener("pointerleave", clear);
     });
 
+    startLevel(0);
     loop();
 
     const warmCache = () =>

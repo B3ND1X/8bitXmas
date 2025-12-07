@@ -1,7 +1,7 @@
-const CACHE_NAME = "mason-puzzle4-v2";
+const CACHE_NAME = "8bit Santa v1";
 const ASSETS = [
   "./",
-  "./Mason-puzzle-4.html",
+  "./index.html",
   "./game.html",
   "./controller-bg.jpg",
   "./manifest.webmanifest",
@@ -14,7 +14,7 @@ const ASSETS = [
   "./audio/death.wav",
   "./audio/stomp.wav",
 ];
-const OFFLINE_FALLBACK = "./Mason-puzzle-4.html";
+const OFFLINE_FALLBACK = "./index.html";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
